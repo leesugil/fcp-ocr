@@ -201,7 +201,7 @@ def detect_texts_from_video(file_path: str='', target: list[str]=[], skip_frames
                 cv2.waitKey(0)
 
         # if mode == 'and', make sure all texts were detected.
-        if (mode == 'and') and (detected != [t[0] for t in targets]):
+        if (mode == 'and') and (set(detected) != {t[0] for t in targets}):
             continue
 
         # Process the scanned data
