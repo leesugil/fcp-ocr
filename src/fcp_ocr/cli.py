@@ -97,9 +97,13 @@ def main():
     # debug mode
     parser.add_argument("--debug", type=int, default=0, help="(experimental) display debug messages. 0 or 1")
 
+    # optimized mode
+    parser.add_argument("--optimize", type=int, default=1, help="(experimental) improves speed by detecting at most one text per target frame. useful when scanning multiple regions per frame but all you care is whether something was detected or not. 0 or 1")
+
     args = parser.parse_args()
     sync = True if args.sync == 1 else False
     debug = True if args.debug == 1 else False
+    optimize = True if args.optimize == 1 else False
 
     xf = clean_filepath(args.fcpxml_filepath)
     vf = clean_filepath(parse_fcpxml_filepath(xf))
@@ -117,7 +121,7 @@ def main():
     width, height = get_resolution(vf)
     if args.targetp:
         target = parse_targetp(args.targetp, width, height)
-    detected_texts = detect_text.detect_texts_from_video(file_path=vf, target=target, skip_frames=args.skip_frames, skip_seconds=args.skip_seconds, mode=args.ocr_mode, debug=debug)
+    detected_texts = detect_text.detect_texts_from_video(file_path=vf, target=target, skip_frames=args.skip_frames, skip_seconds=args.skip_seconds, mode=args.ocr_mode, debug=debug, optimize=optimize)
 
     place_markers.place(filepath=xf, texts=detected_texts, affix=args.affix, sync=sync)
 

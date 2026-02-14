@@ -89,111 +89,6 @@ def frame_to_seconds(frames: int, fps: int) -> int:
     output = round(frames / fps)
     return output
 
-#def filter_match(texts, detected, mode):
-#    """
-#    texts = 'abc xyz ab cd xy zw ...'
-#    mode = 'and' or 'or'
-#    """
-#    output = []
-#
-#    # OR
-#    if mode == 'or':
-#        output = detected
-#        return output
-#
-#    # AND
-#    for d in detected:
-#        if set(texts) == set(d['detected']):
-#            output.append(d)
-#
-#    return output
-
-#def detect_texts_from_video(file_path: str='', texts: list[str]=[], top: int=0, left: int=0, bottom: int=0, right: int=0, skip_frames: int=1, skip_seconds: int=0, mode='and'):
-#    """
-#    mode = 'and' or 'or'
-#    returns the info as a list of dictionaries.
-#    [{'timestamp': 'hh:mm:ss', 'detected': [a, b, c]}, {...}, ...]
-#
-#    detected_texts = detect_text.detect_texts_from_video(file_path=vf, target=args.target, skip_frames=args.skip_frames, skip_seconds=args.skip_seconds, mode=args.ocr_mode)
-#    """
-#    assert file_path is not None
-#    assert isinstance(file_path, str)
-#    assert len(texts) > 0 #if args.texts = '', then texts = [], raising assertion.
-#    assert skip_frames > 0
-#    assert mode in {'and', 'or'}
-#    for s in texts:
-#        assert isinstance(s, str)
-#        assert s != ''
-#    print(f"DEBUG: texts: {texts}")
-#
-#    video = cv2.VideoCapture(file_path)
-#    if not video.isOpened():
-#        raise RuntimeError("Could not open video file")
-#
-#    # Determine cropping region
-#    height = round(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-#    width = round(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-#    if (top, left, bottom, right) == (0, 0, 0, 0):
-#        bottom = height
-#        right = width
-#    #print(f"top,left,bottom,right {top},{left},{bottom},{right}")
-#
-#    output = []
-#
-#    # Scan every skip_frames frames
-#    fps = video.get(cv2.CAP_PROP_FPS)
-#    if skip_seconds != 0:
-#        skip_frames = seconds_to_frame(skip_seconds, fps)
-#    frame_count = round(video.get(cv2.CAP_PROP_FRAME_COUNT))
-#
-#    for i in tqdm(range(frame_count)):
-#        if (i % skip_frames) != 0:
-#            continue
-#
-#        ret, frame = video.read()
-#        if not ret:
-#            break
-#
-#        # frame is a NumPy array (H x W x 3)
-#        # Do something with frame
-#        d = {'time': '', 'detected': []}
-#
-#        # Crop for OCR Scan
-#        img = crop_frame(frame=frame, top=top, left=left, bottom=bottom, right=right)
-#        #print(f"top,left,bottom,right {top},{left},{bottom},{right}")
-#
-#        # Grayscale for OCR Scan
-#        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-#
-#        # Upscale for PyTesseract
-#        #scale = 2
-#        #img = cv2.resize(img, (img.shape[1]*scale, img.shape[0]*scale), interpolation=cv2.INTER_CUBIC)
-#
-#        # OCR Scan
-#        captured_string = tess.image_to_string(img)
-#        #print(f"Captured string: {captured_string}")
-#
-#        d['detected'] = detect_texts_from_string(string=captured_string, texts=texts)
-#        #print(f"Detected string: {d['detected']}")
-#        #cv2.imshow("debug frame", img)
-#        #cv2.waitKey(1)
-#
-#        # Process the scanned data
-#        if d['detected']:
-#            td = datetime.timedelta(milliseconds=video.get(cv2.CAP_PROP_POS_MSEC))
-#            d['time'] = format_timedelta(td)
-#            output.append(d)
-#            print(f"detected from the current frame: {d['detected']}")
-#            print(f"OCR result so far: {output}")
-#
-#    video.release()
-#
-#    print(f"OCR result before filter_match: {output}")
-#    output = filter_match(texts=texts, detected=output, mode=mode)
-#    print(f"OCR result after filter_match: {output}")
-#
-#    return output
-
 def parse_target(string: str, w_max: int, h_max: int) -> list[int]:
     """
     "text:1,2,3,4" -> ['text', 1, 2, 3, 4]
@@ -210,7 +105,7 @@ def parse_target(string: str, w_max: int, h_max: int) -> list[int]:
 
     return output
 
-def detect_texts_from_video(file_path: str='', target: list[str]=[], skip_frames: int=1, skip_seconds: float=0.0, mode: str='and', debug: bool=False):
+def detect_texts_from_video(file_path: str='', target: list[str]=[], skip_frames: int=1, skip_seconds: float=0.0, mode: str='and', debug: bool=False, optimize: bool=True):
     """
     target = ['abc:0,0,10,10', 'xyz:20,20,400,400', ...]
     mode = 'and' or 'or'
@@ -262,7 +157,13 @@ def detect_texts_from_video(file_path: str='', target: list[str]=[], skip_frames
 
         # OCR capture per each target ['abc', 0, 0, 100, 100]
         detected = []
+        # OCR per each target text and region
         for t in targets:
+            # If optimize==True, ignore all target scans as long as one of them is detected.
+            # only for mode=='or' of course.
+            if optimize and (mode=='or') and detected:
+                break
+
             # Crop for OCR Scan
             img = crop_frame(frame=frame, left=t[1], top=t[2], right=t[3], bottom=t[4])
             #print(f"cropped image for {t}: {img}")
@@ -276,6 +177,7 @@ def detect_texts_from_video(file_path: str='', target: list[str]=[], skip_frames
             if debug:
                 print(f"Captured string in searching for {t}: {captured_string}")
 
+            # Detect text
             detected_text = detect_text_from_string(string=captured_string, text=t[0])
             if not detected_text:
                 # Normalize
@@ -288,6 +190,8 @@ def detect_texts_from_video(file_path: str='', target: list[str]=[], skip_frames
                 img2 = clahe.apply(img)
                 captured_string = tess.image_to_string(img2)
                 detected_text = detect_text_from_string(string=captured_string, text=t[0])
+
+            # Something detected
             if detected_text:
                 detected.append(detected_text)
                 if debug:
@@ -296,6 +200,7 @@ def detect_texts_from_video(file_path: str='', target: list[str]=[], skip_frames
                 cv2.imshow("debug frame", img)
                 cv2.waitKey(0)
 
+        # if mode == 'and', make sure all texts were detected.
         if (mode == 'and') and (detected != [t[0] for t in targets]):
             continue
 
