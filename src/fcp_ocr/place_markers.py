@@ -8,7 +8,8 @@ def place(filepath: str, texts: list[dict], affix: str, sync=False):
     """
     tree, root = fcpxml_io.get_fcpxml(filepath)
     asset_clip = fcpxml_io.get_clip(root, sync)
-    offset = fcpxml_io.get_offset(asset_clip, sync)
+    #offset = fcpxml_io.get_offset(asset_clip, sync)
+    offset = 0.0 # screen detection doesn't need an offset adjustment with a separate audio track
 
     # Place OCR Markers
     for i, s in tqdm(enumerate(texts, start=1)):
