@@ -32,6 +32,7 @@ import numpy as np
 import pytesseract as tess
 import cv2
 import datetime
+from joblib import Parallel, delayed
 
 # Have OCR ready
 tess.pytesseract.tesseract_cmd = "/opt/homebrew/bin/tesseract"
@@ -156,14 +157,53 @@ def detect_texts_from_video(file_path: str='', target: list[str]=[], skip_frames
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # OCR capture per each target ['abc', 0, 0, 100, 100]
-        detected = []
+#       detected = []
         # OCR per each target text and region
-        for t in targets:
-            # If optimize==True, ignore all target scans as long as one of them is detected.
-            # only for mode=='or' of course.
-            if optimize and (mode=='or') and detected:
-                break
+#        for t in targets:
+#            # If optimize==True, ignore all target scans as long as one of them is detected.
+#            # only for mode=='or' of course.
+#            if optimize and (mode=='or') and detected:
+#                break
+#
+#            # Crop for OCR Scan
+#            img = crop_frame(frame=frame, left=t[1], top=t[2], right=t[3], bottom=t[4])
+#            #print(f"cropped image for {t}: {img}")
+#
+#            # Upscale for PyTesseract
+#            scale = 2
+#            img = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+#
+#            # OCR Scan
+#            captured_string = tess.image_to_string(img)
+#            if debug:
+#                print(f"Captured string in searching for {t}: {captured_string}")
+#
+#            # Detect text
+#            detected_text = detect_text_from_string(string=captured_string, text=t[0])
+#            if not detected_text:
+#                # Normalize
+#                img2 = cv2.equalizeHist(img)
+#                captured_string = tess.image_to_string(img2)
+#                detected_text = detect_text_from_string(string=captured_string, text=t[0])
+#            if not detected_text:
+#                # Normalize
+#                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+#                img2 = clahe.apply(img)
+#                captured_string = tess.image_to_string(img2)
+#                detected_text = detect_text_from_string(string=captured_string, text=t[0])
+#
+#            # Something detected
+#            if detected_text:
+#                detected.append(detected_text)
+#                if debug:
+#                    print(f"Detected string: {detected_text}")
+#            if debug:
+#                cv2.imshow("debug frame", img)
+#                cv2.waitKey(0)
 
+        # get parallel
+        # if this experiment is successful, further optimize here by giving a threshold for parallel computing ("go parallel for targets more than N")
+        def ocr_on_roi(frame, t, debug):
             # Crop for OCR Scan
             img = crop_frame(frame=frame, left=t[1], top=t[2], right=t[3], bottom=t[4])
             #print(f"cropped image for {t}: {img}")
@@ -191,24 +231,31 @@ def detect_texts_from_video(file_path: str='', target: list[str]=[], skip_frames
                 captured_string = tess.image_to_string(img2)
                 detected_text = detect_text_from_string(string=captured_string, text=t[0])
 
+            output = ''
             # Something detected
             if detected_text:
-                detected.append(detected_text)
+                #detected.append(detected_text)
+                output = detected_text
                 if debug:
                     print(f"Detected string: {detected_text}")
             if debug:
                 cv2.imshow("debug frame", img)
                 cv2.waitKey(0)
 
+            return output
+
+        parallel_obj = Parallel(n_jobs=-1)
+        # list of detected texts ('' if none detected from target)
+        detected_from_frame = parallel_obj(delayed(ocr_on_roi)(frame, t, debug) for t in targets)
+
         # if mode == 'and', make sure all texts were detected.
-        if (mode == 'and') and (detected != [t[0] for t in targets]):
+        if (mode == 'and') and (detected_from_frame != [t[0] for t in targets]):
             continue
 
         # Process the scanned data
-        if detected:
-            d['detected'] = ' '.join(detected)
+        if not all(i == '' for i in detected_from_frame):
+            d['detected'] = ' '.join(s for s in detected_from_frame if s)
             td = datetime.timedelta(milliseconds=video.get(cv2.CAP_PROP_POS_MSEC))
-            #d['time'] = format_timedelta(td)
             d['time'] = td.total_seconds()
             output.append(d)
             print(f"detected from the current frame: {d['detected']}")
