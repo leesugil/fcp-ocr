@@ -1,25 +1,21 @@
 import xml.etree.ElementTree as ET
 from tqdm import tqdm
-#from . import fcpxml_io
 from fcp_io import fcpxml_io
+from fcp_math import arithmetic
 
-def place(filepath: str, texts: list[dict], affix: str, sync=False):
+def place(filepath: str, texts: list[dict], affix: str, fps):
     """
     texts: [{'time': xx.xxx, 'detected': 'ABC XYZ ...'}, {...}, ...]
     """
     tree, root = fcpxml_io.get_fcpxml(filepath)
-    asset_clip = fcpxml_io.get_clip(root, sync)
-    #offset = fcpxml_io.get_offset(asset_clip, sync)
-    offset = 0.0 # screen detection doesn't need an offset adjustment with a separate audio track
+    asset_clip = fcpxml_io.get_event_asset_clip(root)
 
     # Place OCR Markers
     for i, s in tqdm(enumerate(texts, start=1)):
+        start = arithmetic.float2fcpsec(s['time'], fps)
         start_marker = ET.SubElement(asset_clip, "marker")
-        start_marker.set("start", f"{s['time']+offset}s")
+        start_marker.set("start", start)
         start_marker.set("value", f"OCR detected {i}: {s['detected']}")
-        start_marker.set("duration", "100/6000s")
+        start_marker.set("duration", fps)
         start_marker.set("completed", "0")
-
-    #fcpxml_io.save(tree, filepath, affix)
-    fcpxml_io.save_with_affix(tree, filepath, affix)
 

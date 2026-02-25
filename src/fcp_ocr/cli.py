@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import argparse
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse, unquote
@@ -8,44 +7,7 @@ import cv2
 
 from . import detect_text
 from . import place_markers
-
-def clean_filepath(line):
-    output = os.path.abspath(line.strip())
-    return output
-
-def parse_fcpxml_filepath(xf):
-    fcpxml_filename = 'Info.fcpxml'
-    fcpxml_filepath = os.path.join(xf, fcpxml_filename)
-    tree = ET.parse(fcpxml_filepath)
-    root = tree.getroot()
-    media_rep = root.find(".//media-rep[@kind='original-media']")
-    output = media_rep.get('src')
-    output = urlparse(output)
-    output = unquote(output.path)
-    return output
-
-def parse_fcpxml_filepath_sync(xf):
-    fcpxml_filename = 'Info.fcpxml'
-    fcpxml_filepath = os.path.join(xf, fcpxml_filename)
-
-    tree = ET.parse(fcpxml_filepath)
-    root = tree.getroot()
-
-    # video
-    asset1 = root.find(".//asset[@id='r2']")
-    media_rep1 = asset1.find(".//media-rep[@kind='original-media']")
-    output1 = media_rep1.get('src')
-    output1 = urlparse(output1)
-    output1 = unquote(output1.path) # video
-
-    # audio
-    asset2 = root.find(".//asset[@id='r3']")
-    media_rep2 = asset2.find(".//media-rep[@kind='original-media']")
-    output2 = media_rep2.get('src')
-    output2 = urlparse(output2)
-    output2 = unquote(output2.path) # audio
-
-    return output1, output2
+from fcp_io import fcpxml_io
 
 def get_resolution(filepath):
     video = cv2.VideoCapture(filepath)
@@ -77,7 +39,7 @@ def main():
 
     # Define possible arguments
     # ex)
-    # fcp-ocr --targetp Save:48,45.5,52,48 --targetp Save:21,91,25,95 --targetp Load:21,91,25,95 --targetp 'Save As:48,52,52,55' --targetp Load:48,57.5,52,61 --targetp Saving:46,47,54,53 --targetp OBS:21,11,27,14 --targetp Stream:68,58,78,61 --targetp Record:68,60,78,64 --targetp Game:13,27,25,33 --targetp Tip:13,27,25,33 --targetp Game:45,25,55,29 --targetp Option:45,32,55,36 --targetp Photo:45,39,55,42 --targetp Mode:45,39,55,42 --targetp Option:46,1,55,5 --skip_seconds=1.5 --ocr_mode=or --affix=ocr_marked_ --debug=0 --optimize=1 --sync=1 <filepath>
+    # fcp-ocr --targetp Save:48,45.5,52,48 --targetp Save:21,91,25,95 --targetp Load:21,91,25,95 --targetp 'Save As:48,52,52,55' --targetp Load:48,57.5,52,61 --targetp Saving:46,47,54,53 --targetp OBS:21,11,27,14 --targetp Stream:68,58,78,61 --targetp Record:68,60,78,64 --targetp Game:13,27,25,33 --targetp Tip:13,27,25,33 --targetp Game:45,25,55,29 --targetp Option:45,32,55,36 --targetp Photo:45,39,55,42 --targetp Mode:45,39,55,42 --targetp Option:46,1,55,5 --skip_seconds=1.5 --ocr_mode=or --affix=ocr_marked_ --debug=0 --optimize=1 <filepath>
     parser = argparse.ArgumentParser(description="Detect texts in video (OCR), place FCP Markers")
     parser.add_argument("fcpxml_filepath", help="Absolute filepath to fcpxml (required)")
 
@@ -91,8 +53,8 @@ def main():
     # output
     parser.add_argument("--affix", type=str, default='ocr_marked_', help="affix to modify the output filename")
 
-    # synched clip
-    parser.add_argument("--sync", type=int, default=0, help="(experimental) synched clip. 0 or 1")
+#   # synched clip
+#   parser.add_argument("--sync", type=int, default=0, help="(experimental) synched clip. 0 or 1")
 
     # debug mode
     parser.add_argument("--debug", type=int, default=0, help="(experimental) display debug messages. 0 or 1")
@@ -101,17 +63,17 @@ def main():
     parser.add_argument("--optimize", type=int, default=1, help="(experimental) improves speed by detecting at most one text per target frame. useful when scanning multiple regions per frame but all you care is whether something was detected or not. 0 or 1")
 
     args = parser.parse_args()
-    sync = True if args.sync == 1 else False
+    #sync = True if args.sync == 1 else False
     debug = True if args.debug == 1 else False
     optimize = True if args.optimize == 1 else False
 
-    xf = clean_filepath(args.fcpxml_filepath)
-    vf = clean_filepath(parse_fcpxml_filepath(xf))
+    xf = fcpxml_io.clean_filepath(args.fcpxml_filepath)
+    vf = fcpxml_io.clean_filepath(fcpxml_io.parse_fcpxml_filepath(xf))
     af = vf
-    if args.sync == 1:
-        vf, af = parse_fcpxml_filepath_sync(xf)
-        vf = clean_filepath(vf)
-        af = clean_filepath(af)
+#   if args.sync == 1:
+#       vf, af = parse_fcpxml_filepath_sync(xf)
+#       vf = clean_filepath(vf)
+#       af = clean_filepath(af)
     print(f"fcpxml file: {xf}")
     print(f"video file: {vf}")
     print(f"audio file: {af}")
@@ -123,7 +85,10 @@ def main():
         target = parse_targetp(args.targetp, width, height)
     detected_texts = detect_text.detect_texts_from_video(file_path=vf, target=target, skip_frames=args.skip_frames, skip_seconds=args.skip_seconds, mode=args.ocr_mode, debug=debug, optimize=optimize)
 
-    place_markers.place(filepath=xf, texts=detected_texts, affix=args.affix, sync=sync)
+    fps = fcpxml_io.get_fps(root)
+    place_markers.place(filepath=xf, texts=detected_texts, fps=fps)
+
+    fcpxml_io.save_with_affix(tree=tree, src_filepath=xf, affix=args.affix)
 
 if __name__ == "__main__":
     main()

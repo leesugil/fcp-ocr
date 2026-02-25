@@ -59,16 +59,6 @@ def detect_text_from_string(string: str, text: str):
         return text
     return ''
 
-#def detect_texts_from_string(string: str, texts: list[str]):
-#    output = []
-#
-#    for t in texts:
-#        d = detect_text_from_string(string, t)
-#        if d != '':
-#            output.append(d)
-#
-#    return output
-
 def format_timedelta(td: datetime.timedelta) -> str:
     total_seconds = int(td.total_seconds())
     hours, remainder = divmod(total_seconds, 3600)
