@@ -38,7 +38,7 @@ def main():
 
     # Define possible arguments
     # ex)
-    # fcp-ocr --targetp Save:48,45.5,52,48 --targetp Save:21,91,25,95 --targetp Load:21,91,25,95 --targetp 'Save As:48,52,52,55' --targetp Load:48,57.5,52,61 --targetp Saving:46,47,54,53 --targetp OBS:21,11,27,14 --targetp Stream:68,58,78,61 --targetp Record:68,60,78,64 --targetp Game:13,27,25,33 --targetp Tip:13,27,25,33 --targetp Game:45,25,55,29 --targetp Option:45,32,55,36 --targetp Photo:45,39,55,42 --targetp Mode:45,39,55,42 --targetp Option:46,1,55,5 --skip_seconds=1.5 --ocr_mode=or --affix=ocr_marked_ --optimize <filepath>
+    # fcp-ocr --targetp Save:48,45.5,52,48 --targetp Save:21,91,25,95 --targetp Load:21,91,25,95 --targetp 'Save As:48,52,52,55' --targetp Load:48,57.5,52,61 --targetp Saving:46,47,54,53 --targetp OBS:21,11,27,14 --targetp Stream:68,58,78,61 --targetp Record:68,60,78,64 --targetp Game:13,27,25,33 --targetp Tip:13,27,25,33 --targetp Game:45,25,55,29 --targetp Option:45,32,55,36 --targetp Photo:45,39,55,42 --targetp Mode:45,39,55,42 --targetp Option:46,1,55,5 --skip-seconds=1.5 --ocr_mode=or --affix=ocr_marked_ --optimize <filepath>
     parser = argparse.ArgumentParser(description="Detect texts in video (OCR), place FCP Markers")
     parser.add_argument("fcpxml_filepath", help="Absolute filepath to fcpxml (required)")
     parser.add_argument("--keyword", type=str, default='silence', help="Keyword to be used in Marker description")
@@ -47,8 +47,8 @@ def main():
     # video/OCR related
     parser.add_argument("--target", action='append', type=str, help="texts to search in video. TEXT:left,top,right,bottom")
     parser.add_argument("--targetp", action='append', type=str, help="texts to search in video. TEXT:left%,top%,left%,right%,bottom%")
-    parser.add_argument("--skip_frames", type=int, default=1, help="Perform OCR scanning on every X frames. Do not use with --skip_seconds.")
-    parser.add_argument("--skip_seconds", type=float, default=0, help="Perform OCR scanning on every X seconds. Do not use with --skip_frames.")
+    parser.add_argument("--skip-frames", type=int, default=1, help="Perform OCR scanning on every X frames. Do not use with --skip-seconds.")
+    parser.add_argument("--skip-seconds", type=float, default=0, help="Perform OCR scanning on every X seconds. Do not use with --skip-frames.")
     parser.add_argument("--ocr_mode", type=str, default='and', help="Whether the list of texts for the text detection is meant for AND conditions or OR conditions. 'and' or 'or' only.")
 
     # output
@@ -74,7 +74,7 @@ def main():
     width, height = get_resolution(vf)
     if args.targetp:
         target = parse_targetp(args.targetp, width, height)
-    detected_texts = detect_text.detect_texts_from_video(file_path=vf, target=target, skip_frames=args.skip_frames, skip_seconds=args.skip_seconds, mode=args.ocr_mode, debug=args.debug, optimize=args.optimize)
+    detected_texts = detect_text.detect_texts_from_video(file_path=vf, target=target, skip_frames=args.skip-frames, skip_seconds=args.skip-seconds, mode=args.ocr_mode, debug=args.debug, optimize=args.optimize)
 
     tree, root = fcpxml_io.get_fcpxml(xf)
     fps = fcpxml_io.get_fps(root)

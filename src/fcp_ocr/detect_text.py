@@ -96,6 +96,7 @@ def parse_target(string: str, w_max: int, h_max: int) -> list[int]:
 
     return output
 
+# for future project, consider binding this to C/C++
 def detect_texts_from_video(file_path: str='', target: list[str]=[], skip_frames: int=1, skip_seconds: float=0.0, mode: str='and', debug: bool=False, optimize: bool=True):
     """
     target = ['abc:0,0,10,10', 'xyz:20,20,400,400', ...]
