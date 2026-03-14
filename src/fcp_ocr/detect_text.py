@@ -104,9 +104,12 @@ def detect_texts_from_video(file_path: str='', target: list[str]=[], skip_frames
     returns the info as a list of dictionaries.
     [{'timestamp': 'hh:mm:ss', 'detected': 'abc xyz'}, {...}, ...]
     """
+    if not target:
+        return []
+
     assert file_path is not None
-    assert isinstance(file_path, str)
-    assert isinstance(target, list)
+    #assert isinstance(file_path, str)
+    #assert isinstance(target, list)
     assert skip_frames > 0
     assert mode in {'and', 'or'}
     for s in target:

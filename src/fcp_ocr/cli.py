@@ -49,7 +49,7 @@ def main():
     parser.add_argument("--targetp", action='append', type=str, help="texts to search in video. TEXT:left%,top%,left%,right%,bottom%")
     parser.add_argument("--skip-frames", type=int, default=1, help="Perform OCR scanning on every X frames. Do not use with --skip-seconds.")
     parser.add_argument("--skip-seconds", type=float, default=0, help="Perform OCR scanning on every X seconds. Do not use with --skip-frames.")
-    parser.add_argument("--ocr_mode", type=str, default='and', help="Whether the list of texts for the text detection is meant for AND conditions or OR conditions. 'and' or 'or' only.")
+    parser.add_argument("--ocr-mode", type=str, default='and', help="Whether the list of texts for the text detection is meant for AND conditions or OR conditions. 'and' or 'or' only.")
 
     # output
     parser.add_argument("--affix", type=str, default='ocr_marked_', help="affix to modify the output filename")
@@ -70,11 +70,11 @@ def main():
     print(f"audio file: {af}")
 
      # detect text (OCR)
-    target = args.target
+    target = args.target if args.target else []
     width, height = get_resolution(vf)
     if args.targetp:
         target = parse_targetp(args.targetp, width, height)
-    detected_texts = detect_text.detect_texts_from_video(file_path=vf, target=target, skip_frames=args.skip-frames, skip_seconds=args.skip-seconds, mode=args.ocr_mode, debug=args.debug, optimize=args.optimize)
+    detected_texts = detect_text.detect_texts_from_video(file_path=vf, target=target, skip_frames=args.skip_frames, skip_seconds=args.skip_seconds, mode=args.ocr_mode, debug=args.debug, optimize=args.optimize)
 
     tree, root = fcpxml_io.get_fcpxml(xf)
     fps = fcpxml_io.get_fps(root)
